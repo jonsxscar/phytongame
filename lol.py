@@ -2,9 +2,6 @@ import pygame
 import sys
 import random
 
-
-
-
 # Inicializar pygame
 pygame.init()
 
@@ -18,13 +15,16 @@ screen_height = 400
 screen = pygame.display.set_mode((screen_width, screen_height))
 pygame.display.set_caption("T-Rex Dino Run")
 
-# Inicializar variables de salto
 dino_jump = False
 jump_count = 10
 
 #score
 score = 0
-scored = False
+font = pygame.font.Font(None, 36)
+
+# Estado del juego
+game_over = False
+start_screen = True  # Nuevo estado para la pantalla de inicio
 
 # Cargar imágenes
 dino_img = pygame.image.load("kivy_venv\dino.png")
@@ -45,32 +45,144 @@ bird_y = random.randint(200, 300)
 # Variables para el tipo de obstáculo actual
 current_obstacle = None
 
-# Función para mostrar el mensaje de pérdida y salir del juego
-def game_over():
-    print("¡Has perdido!")
-    pygame.quit()
-    sys.exit()
+# Función para mostrar la puntuación
+def show_score():
+    score_text = font.render("Puntuación: " + str(score), True, black)
+    screen.blit(score_text, (10, 10))
+
+#prueba
+def show_start_screen():
+    start_text = font.render("¡T-Rex Dino Run!", True, black)
+    screen.blit(start_text, (screen_width // 2 - 100, screen_height // 2 - 50))
+
+    start_button = pygame.Rect(screen_width // 2 - 60, screen_height // 2 + 20, 120, 40)
+    pygame.draw.rect(screen, (200, 200, 200), start_button)
+    start_text = font.render("Start", True, black)
+    screen.blit(start_text, (screen_width // 2 - 30, screen_height // 2 + 30))
+
+# Función para manejar eventos del ratón #prueba tambien
+def handle_mouse_events():
+    global start_screen, game_over
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            pygame.quit()
+            sys.exit()
+        elif event.type == pygame.MOUSEBUTTONDOWN:
+            mouse_x, mouse_y = pygame.mouse.get_pos()
+            if start_screen:
+                start_button = pygame.Rect(screen_width // 2 - 60, screen_height // 2 + 20, 120, 40)
+                if start_button.collidepoint(mouse_x, mouse_y):
+                    start_screen = False
+                    game_over = False
+                    start_game()
+            elif game_over:
+                restart_button = pygame.Rect(screen_width // 2 - 60, screen_height // 2 + 20, 120, 40)
+                if restart_button.collidepoint(mouse_x, mouse_y):
+                    game_over = False
+                    start_game()
+
+
+# Función para mostrar el mensaje de "perdiste"
+def show_game_over():
+    game_over_text = font.render("¡Perdiste!", True, black)
+    screen.blit(game_over_text, (screen_width // 2 - 50, screen_height // 2 - 20))
+
+def start_game():
+    global dino_x, dino_y, cactus_x, cactus_y, bird_x, bird_y, score, game_over
+    dino_x = 40
+    dino_y = screen_height - dino_img.get_height() - 30 #altura del piso
+    cactus_x = screen_width
+    cactus_y = screen_height - cactus_img.get_height() - 30 #altura del piso
+    bird_x = screen_width
+    bird_y = random.randint(200, 300)
+    score = 0
+    game_over = False
+
+def restart_game():
+    global dino_x, dino_y, cactus_x, cactus_y, bird_x, bird_y, score, game_over
+    dino_x = 40
+    dino_y = screen_height - dino_img.get_height() - 30 #altura del piso
+    cactus_x = screen_width
+    cactus_y = screen_height - cactus_img.get_height() - 30 #altura del piso
+    bird_x = screen_width
+    bird_y = random.randint(200, 300)
+    score = 0
+    game_over = False
+
+# Función para manejar eventos
+def handle_events():
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            pygame.quit()
+            sys.exit()
+        elif event.type == pygame.MOUSEBUTTONDOWN and game_over:
+            restart_game()
+
+# Función para manejar la lógica del movimiento del cactus
+def move_cactus():
+    global cactus_x, score, current_obstacle
+    if not game_over:
+        cactus_x -= 5
+        if cactus_x < 0:
+            cactus_x = screen_width
+            current_obstacle = random.choice(["cactus", "bird"])
+            score += 10
+        #scored = False
+
+# Función para manejar el movimiento del pájaro
+def move_bird():
+    global bird_x, bird_y, current_obstacle
+    if not game_over:
+        bird_x -= 5
+        bird_y = random.randint(200, 300) #prueba
+        if bird_x < 0:
+            bird_x = screen_width
+            current_obstacle = random.choice(["cactus", "bird"])
+        #scored = False
+        print(bird_y) 
+
+# Función para manejar la detección de colisiones
+def check_collision():
+    global game_over
+    if current_obstacle == "cactus":
+        if (
+            dino_x < cactus_x + cactus_img.get_width()
+            and dino_x + dino_img.get_width() > cactus_x
+            and dino_y < cactus_y + cactus_img.get_height()
+            and dino_y + dino_img.get_height() > cactus_y
+        ):
+            game_over = True
+
+    elif current_obstacle == "bird":
+        if (
+            dino_x < bird_x + bird_img.get_width()
+            and dino_x + dino_img.get_width() > bird_x
+            and dino_y < bird_y + bird_img.get_height()
+            and dino_y + dino_img.get_height() > bird_y
+        ):
+            game_over = True
 
 # Bucle principal del juego
 clock = pygame.time.Clock()
 game_running = True
 
-def test():
-    bird_y = random.randint(200, 300)
+while True:
+    handle_mouse_events()
+    
+    if start_screen:
+        show_start_screen()
+        pygame.display.flip()
+        continue  # Salta el resto del bucle y vuelve al principio si estamos en la pantalla de inicio
 
+    move_cactus()
+    move_bird() 
+    check_collision()
 
-while game_running:
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            game_running = False
-
-    # Lógica de movimiento del dinosaurio
     keys = pygame.key.get_pressed()
-    # Lógica de salto
-    if not dino_jump:
-        if keys[pygame.K_SPACE]:
-            dino_jump = True
-    else:
+    if keys[pygame.K_SPACE] and not dino_jump:
+        dino_jump = True
+
+    if dino_jump:
         if jump_count >= -10:
             neg = 1
             if jump_count < 0:
@@ -81,49 +193,7 @@ while game_running:
             dino_jump = False
             jump_count = 10
 
-    # Actualiza la posición del cactus
-    cactus_x -= 5
-    if cactus_x < 0:
-        cactus_x = screen_width
-        current_obstacle = random.choice(["cactus", "bird"])
-        scored = False
-
-    # Actualiza la posición del ave
-    bird_x -= 5
-    test()
-    #bird_y = random.randint(200, 300) #prueba
-    if bird_x < 0:
-        bird_x = screen_width
-        current_obstacle = random.choice(["cactus", "bird"])
-        scored = False
-    print(bird_y) 
-
-    # Colisiones con el obstáculo actual
-    if current_obstacle == "cactus":
-        if (
-            dino_x < cactus_x + cactus_img.get_width()
-            and dino_x + dino_img.get_width() > cactus_x
-            and dino_y < cactus_y + cactus_img.get_height()
-            and dino_y + dino_img.get_height() > cactus_y
-        ):
-            game_over()
-        elif not scored:
-            score += 10
-            scored = True
-
-    elif current_obstacle == "bird":
-        if (
-            dino_x < bird_x + bird_img.get_width()
-            and dino_x + dino_img.get_width() > bird_x
-            and dino_y < bird_y + bird_img.get_height()
-            and dino_y + dino_img.get_height() > bird_y
-        ):
-            game_over()
-        elif not scored:
-            score += 10
-            scored = True
-
-        # Dibuja en la pantalla
+    # Dibuja en la pantalla
     screen.fill(white)
     screen.blit(dino_img, (dino_x, dino_y))
 
@@ -133,15 +203,16 @@ while game_running:
         screen.blit(bird_img, (bird_x, bird_y))
 
     # Mostrar puntaje
-    font = pygame.font.Font(None, 36)
-    score_text = font.render(f"Score: {score}", True, black)
-    screen.blit(score_text, (10, 10))
+    show_score()
+
+    if game_over:
+        show_game_over()
+        restart_button = pygame.Rect(screen_width // 2 - 60, screen_height // 2 + 20, 120, 40)
+        pygame.draw.rect(screen, (200, 200, 200), restart_button)
+        restart_text = font.render("Reiniciar", True, black)
+        screen.blit(restart_text, (screen_width // 2 - 50, screen_height // 2 + 30))
 
     pygame.display.flip()
 
     # Controla la velocidad del juego
     clock.tick(40)
-
-# Cierra pygame al salir del bucle principal
-pygame.quit()
-sys.exit()
