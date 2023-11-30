@@ -1,6 +1,7 @@
 import pygame
 import sys
 import random
+import pygame.gfxdraw
 
 # Inicializar pygame
 pygame.init()
@@ -27,12 +28,22 @@ game_over = False
 start_screen = True  # Nuevo estado para la pantalla de inicio
 
 # Cargar imágenes
-dino_img = pygame.image.load("kivy_venv\dino.png")
+dino_img = pygame.image.load("dino.png")
 dino_img = pygame.transform.scale(dino_img, (50, 50))
 cactus_img = pygame.image.load("kivy_venv\cactus.png")
 cactus_img = pygame.transform.scale(cactus_img, (50, 50))
 bird_img = pygame.image.load("kivy_venv\pajabird.png")
 bird_img = pygame.transform.scale(bird_img, (50, 50))
+
+# Cargar imágenes de fondo
+game_bg_img = pygame.image.load("city.jpg")  # Ajusta la ruta según tu caso
+game_bg_img = pygame.transform.scale(game_bg_img, (screen_width, screen_height))
+
+start_screen_bg_img = pygame.image.load("fondo.jpg")  # Ajusta la ruta según tu caso
+start_screen_bg_img = pygame.transform.scale(start_screen_bg_img, (screen_width, screen_height))
+
+restart_bg_img = pygame.image.load("city.jpg")  # Ajusta la ruta según tu caso
+restart_bg_img = pygame.transform.scale(restart_bg_img, (screen_width, screen_height))
 
 # Inicializar variables de posición
 dino_x = 40
@@ -41,9 +52,6 @@ cactus_x = screen_width
 cactus_y = screen_height - cactus_img.get_height() - 30 #altura del piso
 bird_x = screen_width
 bird_y = random.randint(200, 300)
-
-# Variables para el tipo de obstáculo actual
-current_obstacle = None
 
 # Función para mostrar la puntuación
 def show_score():
@@ -81,14 +89,13 @@ def handle_mouse_events():
                     game_over = False
                     start_game()
 
-
 # Función para mostrar el mensaje de "perdiste"
 def show_game_over():
     game_over_text = font.render("¡Perdiste!", True, black)
     screen.blit(game_over_text, (screen_width // 2 - 50, screen_height // 2 - 20))
 
 def start_game():
-    global dino_x, dino_y, cactus_x, cactus_y, bird_x, bird_y, score, game_over
+    global dino_x, dino_y, cactus_x, cactus_y, bird_x, bird_y, score, game_over, current_obstacle
     dino_x = 40
     dino_y = screen_height - dino_img.get_height() - 30 #altura del piso
     cactus_x = screen_width
@@ -97,6 +104,7 @@ def start_game():
     bird_y = random.randint(200, 300)
     score = 0
     game_over = False
+    current_obstacle = "cactus"
 
 def restart_game():
     global dino_x, dino_y, cactus_x, cactus_y, bird_x, bird_y, score, game_over
@@ -105,7 +113,6 @@ def restart_game():
     cactus_x = screen_width
     cactus_y = screen_height - cactus_img.get_height() - 30 #altura del piso
     bird_x = screen_width
-    bird_y = random.randint(200, 300)
     score = 0
     game_over = False
 
@@ -127,17 +134,16 @@ def move_cactus():
             cactus_x = screen_width
             current_obstacle = random.choice(["cactus", "bird"])
             score += 10
-        #scored = False
 
 # Función para manejar el movimiento del pájaro
 def move_bird():
-    global bird_x, bird_y, current_obstacle
+    global bird_x, bird_y, current_obstacle, bird_y
     if not game_over:
         bird_x -= 5
-        bird_y = random.randint(200, 300) #prueba
         if bird_x < 0:
             bird_x = screen_width
             current_obstacle = random.choice(["cactus", "bird"])
+            bird_y = random.randint(200, 300) #prueba
         #scored = False
         print(bird_y) 
 
@@ -162,6 +168,12 @@ def check_collision():
         ):
             game_over = True
 
+# Función para aplicar desenfoque a una superficie
+def apply_blur(surface, factor):
+    scaled_surface = pygame.transform.smoothscale(surface, (int(surface.get_width() / factor), int(surface.get_height() / factor)))
+    return pygame.transform.smoothscale(scaled_surface, (surface.get_width(), surface.get_height()))
+
+
 # Bucle principal del juego
 clock = pygame.time.Clock()
 game_running = True
@@ -170,6 +182,7 @@ while True:
     handle_mouse_events()
     
     if start_screen:
+        screen.blit(start_screen_bg_img, (0, 0))
         show_start_screen()
         pygame.display.flip()
         continue  # Salta el resto del bucle y vuelve al principio si estamos en la pantalla de inicio
@@ -195,6 +208,7 @@ while True:
 
     # Dibuja en la pantalla
     screen.fill(white)
+    screen.blit(game_bg_img, (0, 0))
     screen.blit(dino_img, (dino_x, dino_y))
 
     if current_obstacle == "cactus":
@@ -206,6 +220,8 @@ while True:
     show_score()
 
     if game_over:
+        restart_bg_img_blur = apply_blur(restart_bg_img, 5)  # Ajusta el factor según tus preferencias
+        screen.blit(restart_bg_img_blur, (0, 0))
         show_game_over()
         restart_button = pygame.Rect(screen_width // 2 - 60, screen_height // 2 + 20, 120, 40)
         pygame.draw.rect(screen, (200, 200, 200), restart_button)
